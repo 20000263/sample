@@ -1,0 +1,361 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>订单列表 - 社区运营系统</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* 本页专属样式 */
+/* 状态 Tabs(分段控件风格,激活项跟随状态色) */
+.tabs {
+  display: inline-flex; gap: 4px; background: #f1f3f6; padding: 4px;
+  border-radius: 10px; margin-bottom: 18px;
+}
+.tab {
+  padding: 7px 20px; border-radius: 8px; cursor: pointer; user-select: none;
+  color: var(--text-sub); font-size: 13px; transition: all .2s;
+  display: flex; align-items: center;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: #fff; font-weight: 600;
+  box-shadow: 0 1px 4px rgba(15,23,42,.14);
+}
+.tab .count {
+  margin-left: 6px; padding: 1px 7px; border-radius: 10px;
+  font-size: 11px; background: rgba(15,23,42,.07); color: var(--text-sub);
+}
+.tab.active { color: var(--primary); }
+.tab.active .count { background: var(--primary-light); color: var(--primary); }
+.tab.active[data-status="未签到"] { color: var(--warning); }
+.tab.active[data-status="未签到"] .count { background: var(--warning-light); color: var(--warning); }
+.tab.active[data-status="已签到"] { color: var(--success); }
+.tab.active[data-status="已签到"] .count { background: var(--success-light); color: var(--success); }
+.tab.active[data-status="已取消"] { color: var(--text-sub); }
+.tab.active[data-status="已取消"] .count { background: #eceef1; color: var(--text-sub); }
+
+.num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.slot-cell2 b { display: block; }
+.slot-cell2 span { font-size: 12px; color: var(--text-sub); }
+.tag-full { background: var(--danger-light); color: var(--danger); }
+
+/* 抽屉 */
+.drawer-mask { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 100; }
+.drawer-mask.open { display: block; }
+.drawer {
+  position: fixed; top: 0; right: -620px; width: 600px; height: 100vh; background: #fff; z-index: 101;
+  box-shadow: -6px 0 24px rgba(0,0,0,.12); transition: right .25s ease; display: flex; flex-direction: column;
+}
+.drawer.open { right: 0; }
+.drawer-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; border-bottom: 1px solid var(--border); }
+.drawer-body { flex: 1; overflow: auto; padding: 24px 28px; }
+.drawer-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+.kv { display: grid; grid-template-columns: 96px 1fr; row-gap: 14px; column-gap: 12px; font-size: 13px; }
+.kv .k { color: var(--text-sub); }
+.kv .v { color: var(--text); }
+
+/* 抽屉内分隔线与区块间距 */
+.drawer .divider { border: none; border-top: 1px solid var(--border); margin: 22px 0 20px; }
+.drawer-body > div[style*="border-left"] { margin-top: 0; }
+
+/* 抽屉底部提示 */
+.drawer-tip {
+  display: flex; align-items: flex-start; gap: 8px; margin-top: 24px;
+  background: var(--primary-light); border: 1px solid rgba(37,99,235,.18);
+  border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.7; color: var(--text-sub);
+}
+.drawer-tip .tip-icon { flex-shrink: 0; }
+
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+.tl-item { position: relative; padding-bottom: 16px; }
+.tl-item::before {
+  content: ""; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--primary); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--primary-border);
+}
+.tl-item.muted::before { background: #cbd5e1; box-shadow: 0 0 0 1px var(--border); }
+.tl-title { font-size: 13px; font-weight: 500; }
+.tl-time { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ① 左侧导航 -->
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-icon">🏢</span>社区运营系统</div>
+    <nav class="nav">
+      <div class="nav-title">平台</div>
+      <a class="nav-item"><span class="icon">🏠</span>工作台</a>
+
+      <!-- 模块:场地管理 -->
+      <div class="nav-title">场地管理</div>
+      <a class="nav-item" href="场地排期.html"><span class="icon">📅</span>场地排期</a>
+      <a class="nav-item active" href="订单列表.html"><span class="icon">📋</span>订单列表<span class="nav-badge">3</span></a>
+      <a class="nav-item" href="基础配置.html"><span class="icon">⚙️</span>基础配置</a>
+
+    </nav>
+  </aside>
+
+  <div class="main">
+
+    <!-- ② 顶部栏 -->
+    <header class="topbar">
+      <div class="breadcrumb">社区运营系统 / 场地管理 / <b>订单列表</b></div>
+      <div class="topbar-right">
+        <span style="color:var(--text-sub);font-size:13px;">🏛️ 阳光花园社区</span>
+        <div class="avatar">管</div>
+      </div>
+    </header>
+
+    <!-- ③ 内容区 -->
+    <main class="content">
+
+      <div class="card">
+        <div class="card-body">
+
+          <!-- 状态 Tabs -->
+          <div class="tabs">
+            <div class="tab active" data-status="未签到">未签到<span class="count">3</span></div>
+            <div class="tab" data-status="已签到">已签到<span class="count">5</span></div>
+            <div class="tab" data-status="已取消">已取消<span class="count">2</span></div>
+          </div>
+
+          <!-- 筛选栏 -->
+          <div class="filter-bar">
+            <input class="input" placeholder="订单号 / 预订人 / 手机号">
+            <select class="select"><option>全部场地</option><option>1号羽毛球馆</option><option>2号羽毛球馆</option><option>室外篮球场</option><option>乒乓球室 A</option><option>舞蹈排练室</option></select>
+            <select class="select"><option>全部预订类型</option><option>员工</option><option>客户</option><option>课程</option></select>
+            <select class="select"><option>全部状态</option><option>未签到</option><option>已签到</option><option>已取消</option></select>
+            <input class="input" type="date" value="2026-09-01" style="width:140px;">
+            <span style="color:var(--text-sub);">至</span>
+            <input class="input" type="date" style="width:140px;">
+            <button class="btn btn-primary btn-sm" style="height:34px;">查询</button>
+            <button class="btn btn-sm" style="height:34px;">重置</button>
+          </div>
+
+          <!-- 订单表格 -->
+          <table class="table">
+            <thead>
+              <tr>
+                <th>订单号</th><th>场地 / 排期时段</th><th>预订类型</th><th>预订人</th><th>联系电话</th>
+                <th>预订人数</th><th>状态</th><th>下单时间</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num-cell">YY20260901-0006</td>
+                <td class="slot-cell2"><b>1号羽毛球馆</b><span>09-01 19:00 ~ 21:00</span></td>
+                <td><span class="tag tag-blue">员工</span></td>
+                <td>王强</td><td class="num-cell">187****9087</td><td class="num-cell">2 人</td>
+                <td><span class="tag tag-green">已签到</span></td>
+                <td class="num-cell">09-01 08:12</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260901-0005</td>
+                <td class="slot-cell2"><b>1号羽毛球馆</b><span>09-01 19:00 ~ 21:00</span></td>
+                <td><span class="tag tag-blue">员工</span></td>
+                <td>张伟</td><td class="num-cell">138****6210</td><td class="num-cell">3 人</td>
+                <td><span class="tag tag-green">已签到</span></td>
+                <td class="num-cell">09-01 08:05</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260901-0004</td>
+                <td class="slot-cell2"><b>2号羽毛球馆</b><span>09-01 15:00 ~ 17:00</span></td>
+                <td><span class="tag tag-green">客户</span></td>
+                <td>李娜</td><td class="num-cell">159****3321</td><td class="num-cell">4 人</td>
+                <td><span class="tag tag-green">已签到</span></td>
+                <td class="num-cell">09-01 07:40</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260901-0003</td>
+                <td class="slot-cell2"><b>2号羽毛球馆</b><span>09-01 15:00 ~ 17:00</span></td>
+                <td><span class="tag tag-green">客户</span></td>
+                <td>赵磊</td><td class="num-cell">150****7712</td><td class="num-cell">4 人</td>
+                <td><span class="tag tag-orange">未签到</span></td>
+                <td class="num-cell">09-01 07:36</td>
+                <td class="actions">
+                  <button class="btn btn-text" onclick="openDrawer()">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260901-0002</td>
+                <td class="slot-cell2"><b>舞蹈排练室</b><span>09-01 09:00 ~ 12:00</span></td>
+                <td><span class="tag tag-purple">课程</span></td>
+                <td>张教练</td><td class="num-cell">139****0021</td><td class="num-cell">30 人</td>
+                <td><span class="tag tag-green">已签到</span></td>
+                <td class="num-cell">08-30 16:20</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260901-0001</td>
+                <td class="slot-cell2"><b>舞蹈排练室</b><span>09-01 15:00 ~ 17:00</span></td>
+                <td><span class="tag tag-purple">课程</span></td>
+                <td>李老师</td><td class="num-cell">137****6688</td><td class="num-cell">30 人</td>
+                <td><span class="tag tag-orange">未签到</span></td>
+                <td class="num-cell">08-30 16:15</td>
+                <td class="actions">
+                  <button class="btn btn-text" onclick="openDrawer()">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260902-0001</td>
+                <td class="slot-cell2"><b>1号羽毛球馆</b><span>09-02 10:00 ~ 12:00</span></td>
+                <td><span class="tag tag-green">客户</span></td>
+                <td>陈晨</td><td class="num-cell">136****8899</td><td class="num-cell">3 人</td>
+                <td><span class="tag tag-orange">未签到</span></td>
+                <td class="num-cell">08-31 20:44</td>
+                <td class="actions">
+                  <button class="btn btn-text" onclick="openDrawer()">详情</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260831-0002</td>
+                <td class="slot-cell2"><b>室外篮球场</b><span>08-31 17:00 ~ 19:00</span></td>
+                <td><span class="tag tag-green">客户</span></td>
+                <td>孙涛</td><td class="num-cell">186****2233</td><td class="num-cell">6 人</td>
+                <td><span class="tag tag-green">已签到</span></td>
+                <td class="num-cell">08-31 08:36</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260830-0002</td>
+                <td class="slot-cell2"><b>乒乓球室 A</b><span>08-30 14:00 ~ 16:00</span></td>
+                <td><span class="tag tag-green">客户</span></td>
+                <td>周敏</td><td class="num-cell">137****5566</td><td class="num-cell">2 人</td>
+                <td><span class="tag tag-gray">已取消</span></td>
+                <td class="num-cell">08-29 18:22</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+              <tr>
+                <td class="num-cell">YY20260829-0001</td>
+                <td class="slot-cell2"><b>乒乓球室 A</b><span>08-29 10:00 ~ 12:00</span></td>
+                <td><span class="tag tag-blue">员工</span></td>
+                <td>吴刚</td><td class="num-cell">155****1123</td><td class="num-cell">4 人</td>
+                <td><span class="tag tag-gray">已取消</span></td>
+                <td class="num-cell">08-28 21:14</td>
+                <td class="actions"><button class="btn btn-text" onclick="openDrawer()">详情</button></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- 分页 -->
+          <div class="pagination">
+            <span style="margin-right:auto;">共 10 条记录</span>
+            <button class="page-btn">‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">›</button>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 订单详情抽屉 -->
+<div class="drawer-mask" id="drawerMask" onclick="closeDrawer()"></div>
+<div class="drawer" id="orderDrawer">
+  <div class="drawer-header">
+    <div class="modal-title">订单详情 <span style="font-weight:400;color:var(--text-sub);font-size:13px;margin-left:6px;">YY20260901-0003</span></div>
+    <span class="modal-close" onclick="closeDrawer()">✕</span>
+  </div>
+  <div class="drawer-body">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--warning-light);border-radius:8px;padding:12px 14px;margin-bottom:18px;">
+      <span style="color:var(--warning);font-weight:600;">状态:待签到</span>
+      <span style="color:var(--text-sub);font-size:12px;">请于排期时段开始前到场签到</span>
+    </div>
+
+    <!-- 关联排期 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px;padding-left:10px;border-left:3px solid var(--primary);">关联排期</div>
+    <div class="kv">
+      <span class="k">场地</span><span class="v">2号羽毛球馆(CD-002)· 文体中心 1F 102</span>
+      <span class="k">排期时段</span><span class="v">2026-09-01 15:00 ~ 17:00</span>
+      <span class="k">容纳人数</span><span class="v">8 人</span>
+      <span class="k">排期状态</span><span class="v"><span class="tag tag-full">已约满</span> 预订人数 8/8</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 预订信息 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px;padding-left:10px;border-left:3px solid var(--primary);">预订信息</div>
+    <div class="kv">
+      <span class="k">预订类型</span><span class="v"><span class="tag tag-green">客户</span></span>
+      <span class="k">预订人</span><span class="v">赵磊</span>
+      <span class="k">联系电话</span><span class="v">150****7712</span>
+      <span class="k">预订人数</span><span class="v">4 人</span>
+      <span class="k">下单时间</span><span class="v">2026-09-01 07:36</span>
+      <span class="k">订单备注</span><span class="v">朋友一起打球</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 状态流转 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:14px;padding-left:10px;border-left:3px solid var(--primary);">状态流转</div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-title">提交订单,占用排期名额(4 人)</div>
+        <div class="tl-time">2026-09-01 07:36:18</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-title">到场签到核销</div>
+        <div class="tl-time">待处理</div>
+      </div>
+      <div class="tl-item muted">
+        <div class="tl-title">排期结束,订单完成</div>
+        <div class="tl-time">—</div>
+      </div>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="drawer-tip">
+      <span class="tip-icon">💡</span>
+      <span>本后台仅提供订单查询,如需取消订单或到场签到,请在 App 端进行相应操作。</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 状态 Tab 过滤 */
+const orderRows = [...document.querySelectorAll('.table tbody tr')];
+const rowStatus = tr => tr.querySelector('td:nth-child(7) .tag').textContent.trim();
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  orderRows.forEach(tr => {
+    tr.style.display = rowStatus(tr) === t.dataset.status ? '' : 'none';
+  });
+}));
+
+/* 详情抽屉 */
+function openDrawer(){
+  document.getElementById('orderDrawer').classList.add('open');
+  document.getElementById('drawerMask').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('orderDrawer').classList.remove('open');
+  document.getElementById('drawerMask').classList.remove('open');
+}
+
+/* 轻提示 */
+const toast = document.getElementById('toastHolder');
+function showToast(msg){
+  toast.textContent = '✓ ' + msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+</script>
+
+<!-- 轻提示 -->
+<div id="toastHolder" style="position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(15,23,42,.88);color:#fff;font-size:13px;padding:10px 22px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:130;"></div>
+<style>#toastHolder.show { opacity:1; transform:translateX(-50%) translateY(0); }</style>
+</body>
+</html>
