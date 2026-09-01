@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>场地排期(月历) - 社区运营系统</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* 本页专属样式 */
+/* 月历工具条 */
+.cal-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.cal-month { display: flex; align-items: center; gap: 12px; }
+.cal-month .m { font-size: 17px; font-weight: 700; }
+.cal-legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--text-sub); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 4px; }
+
+/* 月历网格 */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-left: 1px solid var(--border); border-top: 1px solid var(--border); min-width: 980px; }
+.cal-weekhead {
+  background: #f9fafb; padding: 9px 12px; font-size: 12px; color: var(--text-sub);
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: center;
+}
+.cal-cell {
+  min-height: 108px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 8px; background: #fff; cursor: pointer; transition: background .15s;
+}
+.cal-cell:hover { background: #f8fafc; }
+.cal-cell.dim { background: #fafbfc; }
+.cal-cell.dim .d { color: #c0c6cf; }
+.cal-cell.today { background: var(--primary-light); }
+.cal-cell.today .d {
+  background: var(--primary); color: #fff; border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+}
+.cal-cell .d { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
+/* 排期事件块 */
+.ev {
+  font-size: 11px; border-radius: 4px; padding: 2px 6px; margin-top: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.6;
+}
+.ev-emp    { background: #dbeafe; color: #1d4ed8; border-left: 3px solid #3b82f6; }
+.ev-cust   { background: #dcfce7; color: #15803d; border-left: 3px solid #22c55e; }
+.ev-course { background: #ede9fe; color: #6d28d9; border-left: 3px solid #8b5cf6; }
+.ev-full   { background: #fee2e2; color: #b91c1c; border-left: 3px solid #ef4444; }
+.ev-open   { background: #fff; color: #1d4ed8; border: 1px dashed #93c5fd; border-left: 3px solid #3b82f6; }
+.ev-more { color: var(--text-sub); background: none; border: none; padding-left: 6px; }
+
+/* 日详情弹窗列表 */
+.day-list { display: flex; flex-direction: column; gap: 8px; }
+.day-item {
+  display: flex; align-items: center; gap: 10px; font-size: 13px;
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
+}
+.day-item .t { font-weight: 600; white-space: nowrap; min-width: 120px; }
+.day-item.free { color: var(--text-sub); justify-content: center; border-style: dashed; background: #fafbfc; }
+
+/* ---------- 新增排期弹窗 ---------- */
+.type-radios { display: flex; gap: 10px; flex-wrap: wrap; }
+.type-radio {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 18px; cursor: pointer;
+  font-size: 13px; background: #fff; transition: all .15s; user-select: none;
+}
+.type-radio:hover { border-color: var(--primary); }
+.type-radio.on { background: var(--primary-light); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+
+.ck-chip { display: inline-block; cursor: pointer; margin: 0 8px 8px 0; }
+.ck-chip input { display: none; }
+.ck-chip span {
+  display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 12px;
+  border: 1px solid var(--border); background: #fff; color: var(--text-sub); transition: all .15s;
+}
+.ck-chip input:checked + span { background: var(--primary-light); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+
+.slot-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.slot-row select { height: 34px; border: 1px solid var(--border); border-radius: 7px; padding: 0 8px; font-size: 13px; outline: none; }
+.slot-row select:focus { border-color: var(--primary); }
+.slot-row .dash { color: var(--text-sub); }
+.slot-row .rm {
+  width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: #fff;
+  color: var(--text-sub); cursor: pointer; font-size: 12px; flex-shrink: 0;
+}
+.slot-row .rm:hover { color: var(--danger); border-color: var(--danger); }
+.slot-error { display: none; background: var(--danger-light); color: var(--danger); font-size: 12px; border-radius: 6px; padding: 8px 12px; margin-top: 8px; }
+.match-tip { background: var(--primary-light); color: var(--primary); font-size: 12px; border-radius: 6px; padding: 8px 12px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ① 左侧导航 -->
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-icon">🏢</span>社区运营系统</div>
+    <nav class="nav">
+      <div class="nav-title">平台</div>
+      <a class="nav-item"><span class="icon">🏠</span>工作台</a>
+
+      <!-- 模块:场地管理 -->
+      <div class="nav-title">场地管理</div>
+      <a class="nav-item" href="venue-schedule.html"><span class="icon">📅</span>场地排期</a>
+      <a class="nav-item" href="venue-orders.html"><span class="icon">📋</span>订单列表<span class="nav-badge">3</span></a>
+      <a class="nav-item active" href="venue-config.html"><span class="icon">⚙️</span>基础配置</a>
+
+    </nav>
+  </aside>
+
+  <div class="main">
+
+    <!-- ② 顶部栏 -->
+    <header class="topbar">
+      <div class="breadcrumb">社区运营系统 / 场地管理 / <a href="venue-config.html" style="color:var(--text-sub);text-decoration:none;">基础配置</a> / <b>排期月历</b></div>
+      <div class="topbar-right">
+        <span style="color:var(--text-sub);font-size:13px;">🏛️ 阳光花园社区</span>
+        <div class="avatar">管</div>
+      </div>
+    </header>
+
+    <!-- ③ 内容区:单场地 · 月历排期 -->
+    <main class="content">
+
+      <!-- 页头:场地信息 -->
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="page-title">🏟️ 1号羽毛球馆 · 排期月历</div>
+          <span class="tag tag-green">开放中</span>
+        </div>
+        <a class="btn" href="venue-config.html">← 返回列表</a>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-body" style="display:flex;gap:28px;flex-wrap:wrap;font-size:13px;">
+          <span><span style="color:var(--text-sub);">场地编号:</span><b>CD-001</b></span>
+          <span><span style="color:var(--text-sub);">位置:</span>文体中心 1F 101</span>
+          <span><span style="color:var(--text-sub);">容纳人数:</span>8 人</span>
+          <span><span style="color:var(--text-sub);">预订类型:</span><span class="tag tag-blue">员工</span> <span class="tag tag-green">客户</span></span>
+          <span><span style="color:var(--text-sub);">本月统计:</span>已订 <b style="color:var(--primary);">26</b> 时段 · 课程 8 场</span>
+        </div>
+      </div>
+
+      <!-- 月历卡片 -->
+      <div class="card">
+        <div class="card-body">
+          <div class="cal-bar" style="margin-bottom:14px;">
+            <div class="cal-month">
+              <button class="btn btn-sm">‹</button>
+              <span class="m">2026年9月</span>
+              <button class="btn btn-sm">›</button>
+              <button class="btn btn-sm">本月</button>
+              <button class="btn btn-primary btn-sm" style="margin-left:8px;height:32px;" onclick="openSchedule()">＋ 新增排期</button>
+            </div>
+            <div class="cal-legend">
+              <div class="legend-item"><span class="legend-dot" style="background:#dbeafe;border-left:3px solid #3b82f6;"></span>员工预订</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#dcfce7;border-left:3px solid #22c55e;"></span>客户预订</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#ede9fe;border-left:3px solid #8b5cf6;"></span>课程(默认占满)</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#fee2e2;border-left:3px solid #ef4444;"></span>已约满</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#fff;border:1px dashed #93c5fd;border-left:3px solid #3b82f6;"></span>排期未预订(可订)</div>
+              <span style="color:var(--text-sub);">点击日期查看当日详情</span>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="cal-grid">
+              <!-- 星期表头 -->
+              <div class="cal-weekhead">周一</div><div class="cal-weekhead">周二</div><div class="cal-weekhead">周三</div>
+              <div class="cal-weekhead">周四</div><div class="cal-weekhead">周五</div><div class="cal-weekhead">周六</div>
+              <div class="cal-weekhead">周日</div>
+
+              <!-- 第 1 周 -->
+              <div class="cal-cell dim" onclick="openDay('8月31日(周一)', true)"><div class="d">31</div><div class="ev ev-course">09:00 形体课</div></div>
+              <div class="cal-cell today" onclick="openDay('9月1日(周二)', false)">
+                <div class="d">1</div>
+                <div class="ev ev-open">09:00 排期 · 0/8</div>
+                <div class="ev ev-emp">19:00 王强等 · 5/8</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月2日(周三)', false)">
+                <div class="d">2</div>
+                <div class="ev ev-full">15:00 客户 · 8/8</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月3日(周四)', true)"><div class="d">3</div></div>
+              <div class="cal-cell" onclick="openDay('9月4日(周五)', true)"><div class="d">4</div></div>
+              <div class="cal-cell" onclick="openDay('9月5日(周六)', false)">
+                <div class="d">5</div>
+                <div class="ev ev-full">09:00 形体课 · 8/8</div>
+                <div class="ev ev-cust">14:00 赵磊 · 2/8</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月6日(周日)', false)">
+                <div class="d">6</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+              </div>
+
+              <!-- 第 2 周 -->
+              <div class="cal-cell" onclick="openDay('9月7日(周一)', true)"><div class="d">7</div></div>
+              <div class="cal-cell" onclick="openDay('9月8日(周二)', false)"><div class="d">8</div><div class="ev ev-emp">19:00-21:00 王强</div></div>
+              <div class="cal-cell" onclick="openDay('9月9日(周三)', true)"><div class="d">9</div></div>
+              <div class="cal-cell" onclick="openDay('9月10日(周四)', true)"><div class="d">10</div></div>
+              <div class="cal-cell" onclick="openDay('9月11日(周五)', false)"><div class="d">11</div><div class="ev ev-cust">10:00-12:00 陈晨</div></div>
+              <div class="cal-cell" onclick="openDay('9月12日(周六)', false)">
+                <div class="d">12</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+                <div class="ev ev-cust">14:00-16:00 刘洋</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月13日(周日)', false)">
+                <div class="d">13</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+              </div>
+
+              <!-- 第 3 周 -->
+              <div class="cal-cell" onclick="openDay('9月14日(周一)', true)"><div class="d">14</div></div>
+              <div class="cal-cell" onclick="openDay('9月15日(周二)', false)">
+                <div class="d">15</div>
+                <div class="ev ev-open">09:00 排期 · 0/8</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月16日(周三)', true)"><div class="d">16</div></div>
+              <div class="cal-cell" onclick="openDay('9月17日(周四)', false)"><div class="d">17</div><div class="ev ev-emp">19:00-21:00 王强</div></div>
+              <div class="cal-cell" onclick="openDay('9月18日(周五)', true)"><div class="d">18</div></div>
+              <div class="cal-cell" onclick="openDay('9月19日(周六)', false)">
+                <div class="d">19</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+                <div class="ev ev-cust">14:00-16:00 孙涛</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月20日(周日)', false)">
+                <div class="d">20</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+              </div>
+
+              <!-- 第 4 周 -->
+              <div class="cal-cell" onclick="openDay('9月21日(周一)', true)"><div class="d">21</div></div>
+              <div class="cal-cell" onclick="openDay('9月22日(周二)', false)"><div class="d">22</div><div class="ev ev-emp">19:00-21:00 王强</div></div>
+              <div class="cal-cell" onclick="openDay('9月23日(周三)', true)"><div class="d">23</div></div>
+              <div class="cal-cell" onclick="openDay('9月24日(周四)', true)"><div class="d">24</div></div>
+              <div class="cal-cell" onclick="openDay('9月25日(周五)', false)"><div class="d">25</div><div class="ev ev-cust">10:00-12:00 周敏</div></div>
+              <div class="cal-cell" onclick="openDay('9月26日(周六)', false)">
+                <div class="d">26</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+                <div class="ev ev-cust">14:00-16:00 吴刚</div>
+                <div class="ev ev-more">还有 1 条…</div>
+              </div>
+              <div class="cal-cell" onclick="openDay('9月27日(周日)', false)">
+                <div class="d">27</div>
+                <div class="ev ev-course">09:00-12:00 形体课</div>
+              </div>
+
+              <!-- 第 5 周 -->
+              <div class="cal-cell" onclick="openDay('9月28日(周一)', true)"><div class="d">28</div></div>
+              <div class="cal-cell" onclick="openDay('9月29日(周二)', false)"><div class="d">29</div><div class="ev ev-emp">19:00-21:00 王强</div></div>
+              <div class="cal-cell" onclick="openDay('9月30日(周三)', true)"><div class="d">30</div></div>
+              <div class="cal-cell dim" onclick="openDay('10月1日(周四)', true)"><div class="d">1</div></div>
+              <div class="cal-cell dim" onclick="openDay('10月2日(周五)', true)"><div class="d">2</div></div>
+              <div class="cal-cell dim" onclick="openDay('10月3日(周六)', true)"><div class="d">3</div></div>
+              <div class="cal-cell dim" onclick="openDay('10月4日(周日)', true)"><div class="d">4</div></div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;font-size:12px;color:var(--text-sub);">
+            💡 提示:排期通过「新增排期」手动创建;点击任意日期可查看当日时段明细;未预订且结束时间未到的排期,可在详情中删除。
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 日详情弹窗 -->
+<div class="modal-mask" id="dayModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="dayTitle">9月1日(周二)排期详情</div>
+      <span class="modal-close" onclick="closeDay()">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="day-list" id="dayList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeDay()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认弹窗 -->
+<div class="modal-mask" id="confirmModal" style="z-index:120;">
+  <div class="modal" style="width:380px;">
+    <div class="modal-body" style="padding:26px 24px 18px;text-align:center;">
+      <div style="font-size:34px;margin-bottom:10px;">🗑️</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:8px;">确认删除该排期?</div>
+      <div style="font-size:12px;color:var(--text-sub);line-height:1.7;">仅未预订且结束时间未到的排期可删除<br>删除后不可恢复</div>
+    </div>
+    <div class="modal-footer" style="border-top:none;padding-top:0;justify-content:center;">
+      <button class="btn" onclick="closeConfirm()">取消</button>
+      <button class="btn btn-primary" style="background:var(--danger);border-color:var(--danger);" onclick="doDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 轻提示 -->
+<div id="toast" style="position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(15,23,42,.88);color:#fff;font-size:13px;padding:10px 22px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:130;">排期已删除</div>
+<style>#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }</style>
+
+<!-- 新增排期弹窗 -->
+<div class="modal-mask" id="schModal">
+  <div class="modal" style="width:680px;">
+    <div class="modal-header">
+      <div class="modal-title">新增排期 · 1号羽毛球馆</div>
+      <span class="modal-close" onclick="closeSchedule()">✕</span>
+    </div>
+    <div class="modal-body">
+
+      <!-- 排期方式 -->
+      <div class="form-item" style="margin-bottom:16px;">
+        <label class="form-label"><span class="req">*</span>排期方式</label>
+        <div class="type-radios" id="typeRadios">
+          <span class="type-radio on" data-type="day">按日</span>
+          <span class="type-radio" data-type="week">按周</span>
+          <span class="type-radio" data-type="month">按月</span>
+        </div>
+      </div>
+
+      <!-- 按日:多个日期 -->
+      <div class="form-item" id="byDay" style="margin-bottom:16px;">
+        <label class="form-label"><span class="req">*</span>排期日期(可多选)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="tag tag-blue">2026-09-01 ✕</span>
+          <span class="tag tag-blue">2026-09-03 ✕</span>
+          <span class="tag tag-blue">2026-09-05 ✕</span>
+          <input type="date" class="form-input" style="width:160px;">
+          <button class="btn btn-sm" type="button">＋ 添加日期</button>
+        </div>
+      </div>
+
+      <!-- 按周:日期范围 + 周几 -->
+      <div class="form-item" id="byWeek" style="display:none;margin-bottom:16px;">
+        <label class="form-label"><span class="req">*</span>日期范围(按周循环)</label>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <input type="date" class="form-input" style="width:160px;" value="2026-09-01">
+          <span style="align-self:center;color:var(--text-sub);">至</span>
+          <input type="date" class="form-input" style="width:160px;" value="2026-09-30">
+        </div>
+        <label class="form-label"><span class="req">*</span>每周几</label>
+        <div>
+          <label class="ck-chip"><input type="checkbox"><span>周一</span></label>
+          <label class="ck-chip"><input type="checkbox" checked><span>周二</span></label>
+          <label class="ck-chip"><input type="checkbox"><span>周三</span></label>
+          <label class="ck-chip"><input type="checkbox"><span>周四</span></label>
+          <label class="ck-chip"><input type="checkbox"><span>周五</span></label>
+          <label class="ck-chip"><input type="checkbox" checked><span>周六</span></label>
+          <label class="ck-chip"><input type="checkbox"><span>周日</span></label>
+        </div>
+      </div>
+
+      <!-- 按月:月份范围 + 每月几号 -->
+      <div class="form-item" id="byMonth" style="display:none;margin-bottom:16px;">
+        <label class="form-label"><span class="req">*</span>月份范围(按月循环)</label>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <input type="month" class="form-input" style="width:160px;" value="2026-09">
+          <span style="align-self:center;color:var(--text-sub);">至</span>
+          <input type="month" class="form-input" style="width:160px;" value="2026-12">
+        </div>
+        <label class="form-label"><span class="req">*</span>每月几号(逗号分隔,1-31)</label>
+        <input class="form-input" value="1, 15, 30" placeholder="如:1, 15, 30">
+      </div>
+
+      <!-- 时段设置 -->
+      <div class="form-item" style="margin-bottom:16px;">
+        <label class="form-label"><span class="req">*</span>排期时段(可添加多个)</label>
+        <div id="slotRows">
+          <div class="slot-row">
+            <select class="ts"></select><span class="dash">至</span><select class="te"></select>
+            <button class="rm" type="button" onclick="removeRow(this)">✕</button>
+          </div>
+          <div class="slot-row">
+            <select class="ts"></select><span class="dash">至</span><select class="te"></select>
+            <button class="rm" type="button" onclick="removeRow(this)">✕</button>
+          </div>
+        </div>
+        <button class="btn btn-sm" type="button" onclick="addRow()">＋ 添加时段</button>
+        <span class="form-tip" style="margin-left:8px;">时间以 30 分钟为一档;多个时段之间不允许重叠</span>
+        <div class="slot-error" id="slotError"></div>
+      </div>
+
+      <!-- 批量预览 -->
+      <div class="match-tip" id="matchTip">本次批量排期将匹配 <b>3</b> 天 × <b>2</b> 个时段 = <b>6</b> 个排期,保存后生效</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSchedule()">取消</button>
+      <button class="btn btn-primary" onclick="saveSchedule()">保存并批量创建</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const dayModal = document.getElementById('dayModal');
+const dayTitle = document.getElementById('dayTitle');
+const dayList  = document.getElementById('dayList');
+
+// 原型演示数据:每个排期 = 时段 + 状态 + 预订人数/容纳人数 + 关联订单
+// 状态规则:有订单的排期只显示「可预订 / 已约满」(员工/客户按人数累加,课程默认占满 → 已约满);
+//          超出场地开放结束时间的时段不可预订(无锁定概念)
+const STATUS_TAG = {
+  bookable: '<span class="tag tag-blue">可预订</span>',
+  full:     '<span class="tag tag-red">已约满</span>',
+};
+const ORDER_TAG = t => t === '员工' ? 'tag-blue' : t === '客户' ? 'tag-green' : 'tag-purple';
+
+const DAY_DATA = {
+  busy: [
+    { t: '09:00 - 12:00', status: 'bookable', cap: 8, booked: 0, orders: [] },
+    { t: '19:00 - 21:00', status: 'bookable', cap: 8, booked: 5,
+      orders: [
+        ['员工', '王强 · 138****6210', 2, '已签到'],
+        ['员工', '张伟 · 138****6210', 3, '已签到'],
+      ] },
+  ],
+  busy2: [
+    { t: '10:00 - 12:00', status: 'bookable', cap: 8, booked: 0, orders: [] },
+    { t: '15:00 - 17:00', status: 'full', cap: 8, booked: 8,
+      orders: [
+        ['客户', '李娜 · 159****3321', 4, '已签到'],
+        ['客户', '赵磊 · 150****7712', 4, '待签到'],
+      ] },
+  ],
+  free: []
+};
+
+function openDay(name, isEmpty){
+  dayTitle.textContent = name + '排期详情 · 1号羽毛球馆';
+  const slots = isEmpty ? DAY_DATA.free
+    : name.includes('9月1日') ? DAY_DATA.busy : DAY_DATA.busy2;
+  lastDay = { name, isEmpty, arr: slots };   // 记录当前日期数据,删除后重渲染用
+
+  dayList.innerHTML = slots.length ? slots.map((s, idx) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+        <b style="min-width:104px;">${s.t}</b>
+        ${STATUS_TAG[s.status]}
+        <span style="margin-left:auto;color:var(--text-sub);font-size:12px;">预订人数
+          <b style="color:${s.booked >= s.cap ? 'var(--danger)' : 'var(--primary)'};">${s.booked}/${s.cap}</b>
+        </span>
+        ${canDelete(s) ? `<button class="btn btn-text" style="color:var(--danger);font-size:12px;" onclick="deleteSlot(${idx})">删除</button>` : ''}
+      </div>
+      ${s.orders.length ? s.orders.map(o => `
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-sub);margin-top:6px;padding-left:8px;border-left:2px solid var(--border);">
+          <span class="tag ${ORDER_TAG(o[0])}">${o[0]}</span>
+          <span>${o[1]}</span>
+          <span style="margin-left:auto;">${o[2]} 人 · ${o[3]}</span>
+        </div>`).join('') : '<div style="font-size:12px;color:var(--text-sub);margin-top:6px;">暂无预订订单,可预订</div>'}
+    </div>`).join('') + '<div class="day-item free">其余时段空闲</div>'
+    : '<div class="day-item free">当日暂无排期,全部时段空闲</div>';
+  dayModal.classList.add('open');
+}
+function closeDay(){ dayModal.classList.remove('open'); }
+dayModal.addEventListener('click', e => { if (e.target === e.currentTarget) closeDay(); });
+
+/* ---------- 删除排期 ---------- */
+// 删除前提:排期未被预订 && 排期结束时间大于当前日期(演示:当前时刻按 2026-09-01 10:00 计算)
+const NOW_MIN = 10 * 60;
+let lastDay = null, delIndex = null;
+
+function slotEndMin(t){
+  const end = t.split('-').pop().trim();
+  if (end === '全天') return 24 * 60;
+  const [h, m] = end.split(':').map(Number);
+  return h * 60 + m;
+}
+function canDelete(s){
+  return s.status === 'bookable' && s.orders.length === 0 && slotEndMin(s.t) > NOW_MIN;
+}
+function deleteSlot(idx){
+  delIndex = idx;
+  document.getElementById('confirmModal').classList.add('open');
+}
+function closeConfirm(){ document.getElementById('confirmModal').classList.remove('open'); }
+function doDelete(){
+  lastDay.arr.splice(delIndex, 1);
+  closeConfirm();
+  openDay(lastDay.name, lastDay.isEmpty);   // 重渲染当日排期
+  showToast('排期已删除');
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ---------- 新增排期弹窗 ---------- */
+const schModal  = document.getElementById('schModal');
+const slotRows  = document.getElementById('slotRows');
+const slotError = document.getElementById('slotError');
+
+function openSchedule(){ schModal.classList.add('open'); }
+function closeSchedule(){ schModal.classList.remove('open'); slotError.style.display = 'none'; }
+schModal.addEventListener('click', e => { if (e.target === e.currentTarget) closeSchedule(); });
+
+// 生成 08:00 - 22:00、30 分钟一档的时间选项
+const TIMES = [];
+for (let m = 8 * 60; m <= 22 * 60; m += 30) {
+  TIMES.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+}
+function fillTimes(sel, val){
+  sel.innerHTML = TIMES.map(t => `<option ${t === val ? 'selected' : ''}>${t}</option>`).join('');
+}
+function fillAllTimes(){
+  slotRows.querySelectorAll('.slot-row').forEach(r => {
+    fillTimes(r.querySelector('.ts'), r.querySelector('.ts').dataset.v || '09:00');
+    fillTimes(r.querySelector('.te'), r.querySelector('.te').dataset.v || '10:30');
+  });
+}
+
+// 排期方式切换:按日 / 按周 / 按月
+document.getElementById('typeRadios').addEventListener('click', e => {
+  const btn = e.target.closest('.type-radio');
+  if (!btn) return;
+  document.querySelectorAll('.type-radio').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('byDay').style.display   = btn.dataset.type === 'day'   ? '' : 'none';
+  document.getElementById('byWeek').style.display  = btn.dataset.type === 'week'  ? '' : 'none';
+  document.getElementById('byMonth').style.display = btn.dataset.type === 'month' ? '' : 'none';
+});
+
+// 添加 / 删除时段行
+function addRow(){
+  const row = document.createElement('div');
+  row.className = 'slot-row';
+  row.innerHTML = `<select class="ts"></select><span class="dash">至</span><select class="te"></select>
+    <button class="rm" type="button" onclick="removeRow(this)">✕</button>`;
+  slotRows.appendChild(row);
+  fillTimes(row.querySelector('.ts'), '09:00');
+  fillTimes(row.querySelector('.te'), '10:30');
+}
+function removeRow(btn){
+  if (slotRows.querySelectorAll('.slot-row').length > 1) btn.closest('.slot-row').remove();
+}
+
+// 校验:结束晚于开始、多个时段不重叠(30 分钟粒度下按分钟比较)
+function toMin(t){ const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+
+function saveSchedule(){
+  const ranges = [...slotRows.querySelectorAll('.slot-row')].map(r => ({
+    s: toMin(r.querySelector('.ts').value), e: toMin(r.querySelector('.te').value),
+    sTxt: r.querySelector('.ts').value, eTxt: r.querySelector('.te').value,
+  })).sort((a, b) => a.s - b.s);
+
+  for (const r of ranges) {
+    if (r.e <= r.s) {
+      return showSlotError(`时段 ${r.sTxt} - ${r.eTxt} 无效:结束时间必须晚于开始时间`);
+    }
+  }
+  for (let i = 1; i < ranges.length; i++) {
+    if (ranges[i].s < ranges[i - 1].e) {
+      return showSlotError(`时段 ${ranges[i - 1].sTxt}-${ranges[i - 1].eTxt} 与 ${ranges[i].sTxt}-${ranges[i].eTxt} 重叠,请调整后重试`);
+    }
+  }
+  slotError.style.display = 'none';
+  closeSchedule();   // 原型演示:校验通过后关闭弹窗
+}
+function showSlotError(msg){
+  slotError.textContent = '⚠ ' + msg;
+  slotError.style.display = 'block';
+}
+
+fillAllTimes();
+</script>
+</body>
+</html>

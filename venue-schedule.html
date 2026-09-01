@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>场地排期 - 社区运营系统</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* 本页专属样式 */
+/* ① 日期选择 */
+.date-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.date-input {
+  height: 38px; border: 1px solid var(--primary); border-radius: 8px; padding: 0 12px;
+  font-size: 14px; font-weight: 600; color: var(--primary); outline: none; background: #fff;
+}
+.date-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.date-chip {
+  padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: #fff;
+  font-size: 12px; cursor: pointer; text-align: center; line-height: 1.5;
+}
+.date-chip .w { color: var(--text-sub); font-size: 11px; display: block; }
+.date-chip:hover { border-color: var(--primary); }
+.date-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.date-chip.active .w { color: rgba(255,255,255,.85); }
+
+/* ② 图例 */
+.sch-legend { display: flex; gap: 18px; align-items: center; font-size: 12px; color: var(--text-sub); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 4px; }
+
+/* ③ 排期卡片:每块场地一张卡,卡内逐条展示当日排期 */
+.venue-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.venue-head .vname { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.venue-head .vmeta { font-size: 12px; color: var(--text-sub); }
+.venue-head .vcount { margin-left: auto; font-size: 12px; color: var(--text-sub); }
+.venue-head .vcount b { color: var(--primary); }
+
+.sch-list { display: flex; flex-wrap: wrap; gap: 14px; }
+/* 单个排期卡 */
+.scard {
+  flex: 1 1 320px; max-width: 460px; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; background: #fff;
+}
+.scard.empty { border: 1px dashed #93c5fd; background: #f8fbff; }
+.scard-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.scard-time { font-size: 15px; font-weight: 700; }
+.scard-cap { margin: 10px 0 4px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-sub); }
+.cap-bar { flex: 1; height: 6px; border-radius: 4px; background: #f1f5f9; overflow: hidden; }
+.cap-fill { height: 100%; border-radius: 4px; }
+.scard-orders { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.order-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); }
+.order-row .oname { color: var(--text); }
+.order-row .ost { margin-left: auto; }
+/* 排期状态色 */
+.st-bookable .cap-fill { background: var(--primary); }
+.st-full .cap-fill     { background: var(--danger); }
+.tag-full { background: var(--danger-light); color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ① 左侧导航 -->
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-icon">🏢</span>社区运营系统</div>
+    <nav class="nav">
+      <div class="nav-title">平台</div>
+      <a class="nav-item"><span class="icon">🏠</span>工作台</a>
+
+      <!-- 模块:场地管理 -->
+      <div class="nav-title">场地管理</div>
+      <a class="nav-item active" href="venue-schedule.html"><span class="icon">📅</span>场地排期</a>
+      <a class="nav-item" href="venue-orders.html"><span class="icon">📋</span>订单列表<span class="nav-badge">3</span></a>
+      <a class="nav-item" href="venue-config.html"><span class="icon">⚙️</span>基础配置</a>
+
+    </nav>
+  </aside>
+
+  <div class="main">
+
+    <!-- ② 顶部栏 -->
+    <header class="topbar">
+      <div class="breadcrumb">社区运营系统 / 场地管理 / <b>场地排期</b></div>
+      <div class="topbar-right">
+        <span style="color:var(--text-sub);font-size:13px;">🏛️ 阳光花园社区</span>
+        <div class="avatar">管</div>
+      </div>
+    </header>
+
+    <!-- ③ 内容区:先选日期 → 按场地逐条展示当日排期 -->
+    <main class="content">
+
+      <!-- Step 1:日期选择(必须先选) -->
+      <div class="card">
+        <div class="card-body">
+          <div class="date-bar">
+            <span style="font-size:14px;font-weight:600;"><span style="color:var(--danger);">*</span> 排期日期</span>
+            <button class="btn btn-sm" style="height:38px;">‹</button>
+            <input class="date-input" type="date" value="2026-09-01">
+            <button class="btn btn-sm" style="height:38px;">›</button>
+            <button class="btn btn-sm" style="height:38px;">今天</button>
+            <div class="date-chips">
+              <div class="date-chip"><b>08/31</b><span class="w">周日</span></div>
+              <div class="date-chip active"><b>09/01</b><span class="w">周二·今天</span></div>
+              <div class="date-chip"><b>09/02</b><span class="w">周三</span></div>
+              <div class="date-chip"><b>09/03</b><span class="w">周四</span></div>
+              <div class="date-chip"><b>09/04</b><span class="w">周五</span></div>
+              <div class="date-chip"><b>09/05</b><span class="w">周六</span></div>
+              <div class="date-chip"><b>09/06</b><span class="w">周日</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2:当日总览 + 图例 -->
+      <div class="card">
+        <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div class="page-title">2026-09-01(周二)场地排期
+            <span style="font-size:12px;font-weight:400;color:var(--text-sub);margin-left:8px;">12 个场地 · 8 个排期 · 已订 13 人</span>
+          </div>
+          <div class="sch-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--primary);"></span>可预订</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--danger);"></span>已约满</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f1f5f9;border:1px solid var(--border);"></span>未排期(空闲)</div>
+            <span style="color:var(--text-sub);">超出场地开放结束时间的时段不可预订</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 排期卡片列表:每块场地一张卡,卡内逐条排期 -->
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:16px;">
+
+        <!-- 1号羽毛球馆:2 个排期 -->
+        <div class="card">
+          <div class="card-body">
+            <div class="venue-head">
+              <div class="vname">1号羽毛球馆 <span class="tag tag-green">开放中</span></div>
+              <div class="vmeta">CD-001 · 文体中心 1F 101 · 容纳 8 人 · 开放 08:00-22:00</div>
+              <div class="vcount">今日 <b>2</b> 个排期</div>
+            </div>
+            <div class="sch-list">
+
+              <!-- 排期1:无预订 -->
+              <div class="scard empty st-bookable">
+                <div class="scard-head">
+                  <span class="scard-time">09:00 - 12:00</span>
+                  <span class="tag tag-blue">可预订</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:0%;"></div></div><span><b>0</b>/8</span></div>
+                <div class="scard-orders" style="border-top:none;padding-top:0;color:var(--text-sub);font-size:12px;">
+                  暂无预订订单,可预订
+                </div>
+              </div>
+
+              <!-- 排期2:员工预订 5/8 -->
+              <div class="scard st-bookable">
+                <div class="scard-head">
+                  <span class="scard-time">19:00 - 21:00</span>
+                  <span class="tag tag-blue">可预订</span>
+                  <span class="tag tag-blue" style="margin-left:auto;">员工</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:62%;"></div></div><span><b>5</b>/8</span></div>
+                <div class="scard-orders">
+                  <div class="order-row"><span class="tag tag-blue">员工</span><span class="oname">王强 · 138****6210</span><span>2 人</span><span class="ost tag tag-green">已签到</span></div>
+                  <div class="order-row"><span class="tag tag-blue">员工</span><span class="oname">张伟 · 138****6210</span><span>3 人</span><span class="ost tag tag-green">已签到</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 2号羽毛球馆:2 个排期 -->
+        <div class="card">
+          <div class="card-body">
+            <div class="venue-head">
+              <div class="vname">2号羽毛球馆 <span class="tag tag-green">开放中</span></div>
+              <div class="vmeta">CD-002 · 文体中心 1F 102 · 容纳 8 人 · 开放 08:00-22:00</div>
+              <div class="vcount">今日 <b>2</b> 个排期</div>
+            </div>
+            <div class="sch-list">
+
+              <!-- 排期1:无预订 -->
+              <div class="scard empty st-bookable">
+                <div class="scard-head">
+                  <span class="scard-time">10:00 - 12:00</span>
+                  <span class="tag tag-blue">可预订</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:0%;"></div></div><span><b>0</b>/8</span></div>
+                <div class="scard-orders" style="border-top:none;padding-top:0;color:var(--text-sub);font-size:12px;">
+                  暂无预订订单,可预订
+                </div>
+              </div>
+
+              <!-- 排期2:客户预订 8/8 已约满 -->
+              <div class="scard st-full">
+                <div class="scard-head">
+                  <span class="scard-time">15:00 - 17:00</span>
+                  <span class="tag tag-full">已约满</span>
+                  <span class="tag tag-green" style="margin-left:auto;">客户</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:100%;"></div></div><span><b>8</b>/8</span></div>
+                <div class="scard-orders">
+                  <div class="order-row"><span class="tag tag-green">客户</span><span class="oname">李娜 · 159****3321</span><span>4 人</span><span class="ost tag tag-green">已签到</span></div>
+                  <div class="order-row"><span class="tag tag-green">客户</span><span class="oname">赵磊 · 150****7712</span><span>4 人</span><span class="ost tag tag-orange">待签到</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 舞蹈排练室:2 个课程排期 -->
+        <div class="card">
+          <div class="card-body">
+            <div class="venue-head">
+              <div class="vname">舞蹈排练室 <span class="tag tag-green">开放中</span></div>
+              <div class="vmeta">CD-005 · 文体中心 3F 301 · 容纳 30 人 · 开放 08:00-20:00</div>
+              <div class="vcount">今日 <b>2</b> 个排期</div>
+            </div>
+            <div class="sch-list">
+
+              <div class="scard st-full">
+                <div class="scard-head">
+                  <span class="scard-time">09:00 - 12:00</span>
+                  <span class="tag tag-full">已约满</span>
+                  <span class="tag tag-purple" style="margin-left:auto;">课程</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:100%;"></div></div><span><b>30</b>/30</span></div>
+                <div class="scard-orders">
+                  <div class="order-row"><span class="tag tag-purple">课程</span><span class="oname">形体课 · 张教练</span><span>30 人</span><span class="ost tag tag-green">已签到</span></div>
+                </div>
+              </div>
+
+              <div class="scard st-full">
+                <div class="scard-head">
+                  <span class="scard-time">15:00 - 17:00</span>
+                  <span class="tag tag-full">已约满</span>
+                  <span class="tag tag-purple" style="margin-left:auto;">课程</span>
+                </div>
+                <div class="scard-cap"><span>预订人数</span><div class="cap-bar"><div class="cap-fill" style="width:100%;"></div></div><span><b>30</b>/30</span></div>
+                <div class="scard-orders">
+                  <div class="order-row"><span class="tag tag-purple">课程</span><span class="oname">民族舞 · 李老师</span><span>30 人</span><span class="ost tag tag-orange">待签到</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 多功能会议室:停用,无排期 -->
+        <div class="card" style="opacity:.75;">
+          <div class="card-body">
+            <div class="venue-head" style="border-bottom:none;margin-bottom:0;padding-bottom:0;">
+              <div class="vname">多功能会议室 <span class="tag tag-gray">停用</span></div>
+              <div class="vmeta">CD-006 · 1号楼 2F 205 · 容纳 60 人</div>
+              <div class="vcount">场地已停用,不可排期</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:14px;font-size:12px;color:var(--text-sub);">
+        💡 提示:按场地展示其当日全部排期(一个场地一天可有多个排期);排期状态 = 可预订 / 已约满(预订总人数/容纳人数,课程默认占满);未排期时段为空闲,超出场地开放结束时间不可预订。
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.date-chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('.date-chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active');
+}));
+</script>
+</body>
+</html>

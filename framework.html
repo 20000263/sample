@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>整体框架 - 社区运营系统</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ① 左侧导航:社区运营系统,场地管理为其中一个模块 -->
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-icon">🏢</span>社区运营系统</div>
+    <nav class="nav">
+      <div class="nav-title">平台</div>
+      <a class="nav-item"><span class="icon">🏠</span>工作台</a>
+
+      <!-- 模块:场地管理 -->
+      <div class="nav-title">场地管理</div>
+      <a class="nav-item"><span class="icon">📅</span>场地排期</a>
+      <a class="nav-item" href="venue-orders.html"><span class="icon">📋</span>订单列表<span class="nav-badge">3</span></a>
+      <a class="nav-item"><span class="icon">⚙️</span>基础配置</a>
+
+    </nav>
+  </aside>
+
+  <div class="main">
+
+    <!-- ② 顶部栏:面包屑 + 社区切换 + 用户信息 -->
+    <header class="topbar">
+      <div class="breadcrumb">社区运营系统 / 场地管理 / <b>当前页面</b></div>
+      <div class="topbar-right">
+        <span style="color:var(--text-sub);font-size:13px;">🏛️ 阳光花园社区</span>
+        <div class="avatar">管</div>
+      </div>
+    </header>
+
+    <!-- ③ 内容区:三个页面各自填充 -->
+    <main class="content">
+      <div class="placeholder" style="margin-bottom:16px;">
+        <b>统计卡片区</b>
+        如:场地总数 / 今日预订数 / 待处理订单 / 场地收入
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="placeholder">
+            <b>主内容区</b>
+            场地配置 → 列表表格 · 排期 → 时段网格 · 订单 → 订单表格
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>
