@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>场地管理业务流程图</title>
+<style>
+/* ============ 独立文档风格(与平台原型无关) ============ */
+:root {
+  --ink: #1f2937; --sub: #6b7280; --line: #cbd5e1;
+  --blue: #2563eb; --blue-bg: #eff6ff;
+  --green: #16a34a; --green-bg: #f0fdf4;
+  --amber: #d97706; --amber-bg: #fffbeb;
+  --red: #dc2626; --red-bg: #fef2f2;
+  --gray-bg: #f8fafc;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  background: #eceef1; color: var(--ink); padding: 40px 20px 60px;
+}
+.sheet {
+  max-width: 1160px; margin: 0 auto; background: #fff;
+  border-radius: 12px; box-shadow: 0 2px 16px rgba(15,23,42,.08);
+  padding: 48px 56px 56px;
+}
+
+/* 文档头 */
+.doc-head { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 8px; }
+.doc-head h1 { font-size: 24px; letter-spacing: 1px; }
+.doc-head .en { font-size: 12px; color: var(--sub); letter-spacing: 2px; margin-top: 4px; text-transform: uppercase; }
+.doc-meta { display: flex; gap: 28px; margin-top: 16px; font-size: 12px; color: var(--sub); flex-wrap: wrap; }
+.doc-meta b { color: var(--ink); font-weight: 600; }
+
+/* 章节标题 */
+.flow-section { margin-top: 44px; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.sec-head .no {
+  font-size: 26px; font-weight: 700; color: var(--blue); font-family: Georgia, serif;
+}
+.sec-head h2 { font-size: 18px; }
+.sec-sub { font-size: 12px; color: var(--sub); margin-bottom: 26px; }
+.sec-line { border-top: 1px solid var(--line); margin: 26px 0 0; }
+
+/* 子流程标签 */
+.sub-tag {
+  display: inline-block; font-size: 12px; color: var(--sub);
+  border: 1px solid var(--line); border-radius: 4px; padding: 2px 10px;
+  margin: 26px 0 18px; background: var(--gray-bg);
+}
+
+/* ---------- 流程图 ---------- */
+.fcol { display: flex; flex-direction: column; align-items: center; }
+.frow { display: flex; justify-content: center; align-items: flex-start; gap: 72px; }
+.branch { display: flex; flex-direction: column; align-items: center; }
+
+.fn { text-align: center; font-size: 13px; line-height: 1.55; }
+.fn .t2 { font-size: 11px; color: var(--sub); margin-top: 3px; }
+
+.fn-start, .fn-end {
+  padding: 7px 30px; border-radius: 999px; font-size: 13px; font-weight: 600;
+}
+.fn-start { background: var(--ink); color: #fff; }
+.fn-end { background: #fff; color: var(--sub); border: 1.5px dashed var(--line); }
+
+.fn-step {
+  padding: 10px 20px; background: #fff; border: 1.5px solid var(--ink);
+  border-radius: 2px; max-width: 260px; box-shadow: 3px 3px 0 rgba(31,41,55,.12);
+}
+.fn-step.hl { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); box-shadow: 3px 3px 0 rgba(37,99,235,.15); }
+
+.fn-dec {
+  padding: 12px 26px; background: var(--amber-bg); border: 1.5px solid var(--amber);
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0 50%);
+  max-width: 320px; font-weight: 600; color: #92400e;
+}
+.fn-dec .t2 { font-weight: 400; color: var(--sub); }
+
+.fn-warn {
+  padding: 9px 18px; background: var(--red-bg); border: 1.5px dashed var(--red);
+  border-radius: 2px; color: var(--red); max-width: 250px;
+}
+
+.fn-note {
+  background: var(--gray-bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 12px 20px; font-size: 12px; line-height: 1.9; color: var(--sub); max-width: 860px;
+}
+.fn-note b { color: var(--ink); }
+
+/* 箭头 */
+.arr { width: 1.5px; height: 30px; background: var(--sub); position: relative; margin: 5px 0; flex-shrink: 0; }
+.arr::after {
+  content: ""; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--sub);
+}
+.arr.long { height: 42px; }
+.arr .lb { position: absolute; left: 10px; top: 5px; font-size: 12px; white-space: nowrap; }
+.lb.yes { color: var(--green); font-weight: 600; }
+.lb.no  { color: var(--red); font-weight: 600; }
+
+/* 分支标签 */
+.bl { font-size: 12px; padding: 2px 14px; border-radius: 999px; margin-bottom: 2px; border: 1px solid; }
+.bl.yes { background: var(--green-bg); color: var(--green); border-color: var(--green); font-weight: 600; }
+.bl.no  { background: var(--red-bg); color: var(--red); border-color: var(--red); font-weight: 600; }
+.bl.mid { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); font-weight: 600; }
+
+/* 图例 */
+.legend {
+  display: flex; gap: 32px; align-items: center; flex-wrap: wrap;
+  border: 1px solid var(--line); border-radius: 8px; padding: 14px 22px;
+  margin-top: 32px; font-size: 12px; color: var(--sub);
+}
+.legend .it { display: flex; align-items: center; gap: 10px; }
+.legend b { color: var(--ink); font-size: 13px; }
+
+@media print { body { background: #fff; padding: 0; } .sheet { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- 文档头 -->
+  <div class="doc-head">
+    <h1>社区运营系统 · 场地管理业务流程图</h1>
+    <div class="en">Venue Management — Business Process Diagrams</div>
+    <div class="doc-meta">
+      <span>版本 <b>v0.1</b></span>
+      <span>日期 <b>2026-09-01</b></span>
+      <span>配套文档 <b>PRD.md</b></span>
+      <span>涉及角色 <b>活动管家(运营平台) · 员工(员工App) · 居民(居民App)</b></span>
+    </div>
+  </div>
+
+  <!-- ================= 流程一:场地配置 ================= -->
+  <div class="flow-section">
+    <div class="sec-head"><span class="no">01</span><h2>场地配置流程</h2></div>
+    <div class="sec-sub">范围:场地的新增、编辑、停用与开放 · 端:运营平台(基础配置)</div>
+
+    <div class="sub-tag">① 新增 / 编辑场地</div>
+    <div class="fcol">
+      <div class="fn fn-start">开始</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">进入「基础配置」列表</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">点击 新增场地 / 编辑</div>
+      <div class="arr"></div>
+      <div class="frow">
+        <div class="branch">
+          <span class="bl mid">新增</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">填写场地信息<span class="t2">名称*、楼栋*、楼层*、房间号*、容纳人数*、预订类型*、照片*、描述(不展示场地编号)</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-step">提交</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">后台自动生成场地编号</div>
+        </div>
+        <div class="branch">
+          <span class="bl mid">编辑</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">编号、状态反显<span class="t2">不可编辑,仅可修改其余字段</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-step">修改并保存</div>
+        </div>
+      </div>
+      <div class="arr long"></div>
+      <div class="fn fn-dec">必填项校验通过?</div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl no">否</span>
+          <div class="arr"></div>
+          <div class="fn fn-warn">表单提示,停留在弹窗补充填写</div>
+        </div>
+        <div class="branch">
+          <span class="bl yes">是</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">保存成功,状态 = 开放中<span class="t2">列表刷新,记录创建人/创建时间</span></div>
+        </div>
+      </div>
+      <div class="arr long"></div>
+      <div class="fn fn-end">结束</div>
+    </div>
+
+    <div class="sub-tag">② 停用 / 开放场地</div>
+    <div class="fcol">
+      <div class="fn fn-start">开始</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">列表点击「停用」/「开放」</div>
+      <div class="arr"></div>
+      <div class="fn fn-dec">停用时:存在已预订未签到的排期?</div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl yes">是</span>
+          <div class="arr"></div>
+          <div class="fn fn-warn">阻断停用,Toast 提示<span class="t2">「场地名」存在已预订未签到的排期,不可停用</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+        <div class="branch">
+          <span class="bl no">否</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">二次确认弹窗 → 确认</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">状态变更为 停用 / 开放中<span class="t2">停用后列表行置灰,操作列切换为「开放」</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 流程二:场地排期 ================= -->
+  <div class="flow-section">
+    <hr class="sec-line">
+    <div class="sec-head"><span class="no">02</span><h2>场地排期流程</h2></div>
+    <div class="sec-sub">范围:排期的批量创建、删除与状态流转 · 端:运营平台(场地排期)</div>
+
+    <div class="sub-tag">① 新增排期(按日 / 按周 / 按月批量)</div>
+    <div class="fcol">
+      <div class="fn fn-start">开始</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">进入「场地排期」日视图 / 场地月历视图</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">点击「＋ 新增排期」</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">选择日期模式<span class="t2">按日:选日期 · 按周:选星期 · 按月:选每月几号</span></div>
+      <div class="arr"></div>
+      <div class="fn fn-step">添加排期时段(可多个)<span class="t2">开始/结束时间下拉,30 分钟粒度,08:00–22:00</span></div>
+      <div class="arr"></div>
+      <div class="fn fn-dec">时段校验通过?<span class="t2">结束时间 &gt; 开始时间;多个时段不重叠</span></div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl no">否</span>
+          <div class="arr"></div>
+          <div class="fn fn-warn">弹窗内提示,调整时段后重新提交</div>
+        </div>
+        <div class="branch">
+          <span class="bl yes">是</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">提交,批量生成排期</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">排期初始状态:可预订<span class="t2">容量 = 场地容纳人数,已订 0/容纳人数</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-step">日视图 / 月历同步展示<span class="t2">月历可点击日期查看日详情</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-tag">② 删除单个排期(月历 · 日详情弹窗)</div>
+    <div class="fcol">
+      <div class="fn fn-start">开始</div>
+      <div class="arr"></div>
+      <div class="fn fn-step">月历点击日期,打开日详情弹窗</div>
+      <div class="arr"></div>
+      <div class="fn fn-dec">排期未被预订 且 结束时间 &gt; 当前时间?</div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl yes">是</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">展示「删除」按钮 → 二次确认</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">排期移除,日详情与月历刷新</div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+        <div class="branch">
+          <span class="bl no">否</span>
+          <div class="arr"></div>
+          <div class="fn fn-warn">不提供删除入口<span class="t2">已预订或已过期的排期不可删除</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-tag">③ 排期状态自动流转(无需人工干预)</div>
+    <div class="fn fn-note">
+      <b>可预订 ⇄ 已约满</b>:订单占用/释放名额驱动,展示 预订人数/容纳人数;课程排课默认占满,直接进入已约满 ·
+      <b>→ 不可预订</b>:排期结束时间早于当前时间,或所属场地停用(存在订单的排期不展示"不可预订")
+    </div>
+  </div>
+
+  <!-- ================= 流程三:场地预订 ================= -->
+  <div class="flow-section">
+    <hr class="sec-line">
+    <div class="sec-head"><span class="no">03</span><h2>场地预订流程</h2></div>
+    <div class="sec-sub">范围:订单的产生、名额占用、签到与取消 · 端:员工App / 居民App / 运营平台(仅查看)</div>
+
+    <div class="sub-tag">① 下单与名额占用(无审批流,满足规则即下单成功)</div>
+    <div class="fcol">
+      <div class="fn fn-start">开始</div>
+      <div class="arr"></div>
+      <div class="frow" style="gap:56px;">
+        <div class="branch">
+          <span class="bl mid">员工预订</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">员工 App 浏览排期下单</div>
+        </div>
+        <div class="branch">
+          <span class="bl mid">客户预订</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">居民 App 浏览排期下单</div>
+        </div>
+        <div class="branch">
+          <span class="bl mid">课程排课</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">活动管家在运营平台排课<span class="t2">自动占用排期生成课程订单</span></div>
+        </div>
+      </div>
+      <div class="arr long"></div>
+      <div class="fn fn-dec">预订规则校验<span class="t2">① 当前时间在排期结束前 15 分钟内或已过期 → 不可订<br>② 排期被课程占用 → 不允许员工/客户预订<br>③ 员工+客户预订人数总和 ≤ 容纳人数</span></div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl no">不满足</span>
+          <div class="arr"></div>
+          <div class="fn fn-warn">不可预订,App 端给出对应提示</div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+        <div class="branch">
+          <span class="bl yes">满足</span>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">下单成功,占用排期名额<span class="t2">员工/客户:按预订人数累加 · 课程:默认占满</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-dec">名额已占满?</div>
+          <div class="frow" style="gap:80px;">
+            <div class="branch">
+              <span class="bl yes">是</span>
+              <div class="arr"></div>
+              <div class="fn fn-step">排期状态 → 已约满</div>
+            </div>
+            <div class="branch">
+              <span class="bl no">否</span>
+              <div class="arr"></div>
+              <div class="fn fn-step">排期保持可预订<span class="t2">继续接受订单</span></div>
+            </div>
+          </div>
+          <div class="arr long"></div>
+          <div class="fn fn-step">生成订单:未签到<span class="t2">一个排期可关联多个订单</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-tag">② 签到 / 取消(App 端操作,后台仅查看)</div>
+    <div class="fcol">
+      <div class="fn fn-start">订单:未签到</div>
+      <div class="arr"></div>
+      <div class="frow" style="gap:110px;">
+        <div class="branch">
+          <span class="bl yes">到场签到</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">用户在 App 端签到核销</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">订单 → 已签到</div>
+          <div class="arr"></div>
+          <div class="fn fn-step">排期结束,订单完成</div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+        <div class="branch">
+          <span class="bl no">取消订单</span>
+          <div class="arr"></div>
+          <div class="fn fn-step">用户在 App 端取消</div>
+          <div class="arr"></div>
+          <div class="fn fn-step hl">订单 → 已取消,释放名额</div>
+          <div class="arr"></div>
+          <div class="fn fn-step">排期人数减少<span class="t2">已约满的可回到可预订</span></div>
+          <div class="arr"></div>
+          <div class="fn fn-end">结束</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-tag">③ 后台侧(运营平台)</div>
+    <div class="fn fn-note">
+      活动管家在「订单列表」按 <b>Tab(未签到/已签到/已取消)</b> 与筛选条件查看订单、查看详情抽屉(关联排期、预订信息、状态流转);
+      后台<b>不提供签到、取消操作</b> —— 页面提示:如需取消订单或到场签到,请在 App 端进行相应操作
+    </div>
+  </div>
+
+  <!-- 图例 -->
+  <div class="legend">
+    <b>图例</b>
+    <span class="it"><span class="fn-start" style="padding:4px 18px;">开始</span>流程端点(结束为虚线)</span>
+    <span class="it"><span class="fn-step" style="padding:5px 16px;">处理步骤</span>操作 / 系统动作(蓝色为关键结果)</span>
+    <span class="it"><span class="fn-dec" style="padding:6px 22px;">规则校验</span>判断分支</span>
+    <span class="it"><span class="fn-warn" style="padding:5px 16px;">阻断提示</span>校验不通过 / 不可操作</span>
+  </div>
+
+</div>
+</body>
+</html>
